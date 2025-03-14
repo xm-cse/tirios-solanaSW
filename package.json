@@ -1,31 +1,23 @@
 {
-  "name": "tirios-app",
-  "version": "0.1.0",
+  "name": "tirios-solana-token-creator",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "ts-node src/examples/tokenCreationWithCrossmint.ts",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.1",
     "@solana/web3.js": "^1.91.1",
     "bs58": "^5.0.0",
-    "next": "15.2.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
     "@types/bs58": "^4.0.4",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.2.2",
-    "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

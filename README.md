@@ -1,92 +1,128 @@
-# Tirios Solana Token Creation
+# Tirios Solana Token Creator
 
-A Next.js application for creating and managing Solana tokens using the SPL Token Program 2022.
-
-![Solana Logo](https://solana.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogotype.e4df684f.svg&w=256&q=75)
+A standalone TypeScript script for creating Solana tokens using the SPL Token Program 2022 and Crossmint wallets.
 
 ## Overview
 
-This project provides a streamlined interface for creating custom tokens on the Solana blockchain. It leverages Solana's Token Program 2022 to create tokens with configurable properties such as decimals, supply, and authorities.
+This project provides a command-line tool for creating custom tokens on the Solana blockchain. It leverages Solana's Token Program 2022 to create tokens with configurable properties such as decimals, supply, and authorities.
 
-## Key Concepts
+## Understanding Key Concepts
 
-### Understanding the Keypairs
+### The Two Key Components
 
-The application uses two distinct keypairs that serve different purposes:
+In this token creation process, the two key components serve different purposes:
 
 #### crossMintPayer
 
 This is the user's wallet that:
-- Pays for all transaction fees
-- Funds the creation of new accounts
+- Pays for everything (covers transaction fees and funds new accounts)
 - Has the authority to mint new tokens in the future
 - Has the authority to freeze accounts if needed
 
-**This is typically YOUR existing wallet that you use to interact with Solana.**
+**This can be created dynamically using the Crossmint API or loaded from a private key.**
 
 #### mintKeypair
 
-This is a brand new, specially created account that:
+This is a specially created account that:
 - Becomes the permanent identity of your token
 - Stores all the token's metadata (like decimals, supply, etc.)
-- Acts as the permanent address for your token (this is what people will refer to when they talk about your token)
+- Acts as the permanent address for your token
 
-**This is NOT a wallet you would use - it's more like a dedicated database entry for your token.**
+**This is set to a fixed address in the code.**
 
 Think of it this way:
-- **crossMintPayer** is like you, the business owner
-- **mintKeypair** is like the business entity you're creating
+- `crossMintPayer` is like you, the business owner
+- `mintKeypair` is like the business entity you're creating
 
-You (crossMintPayer) pay to register your business (mintKeypair), and you maintain authority over that business, but the business itself has its own distinct identity and address.
+## Running the Script
 
-## Getting Started
+### Prerequisites
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   npm install
+- Node.js (v18 or later)
+- npm or yarn
+- Either your own wallet private key OR a Crossmint API Key
+
+### Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Configure environment variables:
+   
+   Create a `.env` file in the root directory with the following content:
    ```
-3. Start the development server:
-   ```bash
-   npm run dev
+   # Option 1: Use your own wallet (preferred)
+   WALLET_SECRET_KEY=your_base58_encoded_private_key_here
+   
+   # Option 2: Use Crossmint API (only needed if not using your own wallet)
+   CROSSMINT_API_KEY=your_crossmint_api_key_here
+
+   # Solana network (devnet or mainnet-beta)
+   SOLANA_NETWORK=https://api.devnet.solana.com
    ```
-4. Open [http://localhost:3000](http://localhost:3000) with your browser
+   
+   **Important:** Replace `your_base58_encoded_private_key_here` with your actual wallet private key (base58 encoded). 
+   If you don't want to use your own wallet, you can use a Crossmint wallet by providing a valid API key.
 
-## Creating a Token
+### Running the Script
 
-The application handles the complex process of token creation:
+After setting up your .env file, run the script with:
+```bash
+npm start
+```
 
-1. Generates the necessary keypairs
-2. Creates the token mint account
-3. Initializes the token with your specified parameters
-4. Manages the transaction signing process
-5. Broadcasts the transaction to the Solana network
+Alternatively, you can run the TypeScript file directly with ts-node:
+```bash
+npx ts-node src/examples/tokenCreationWithCrossmint.ts
+```
 
-## Key Features
+## Wallet Loading Behavior
 
-- **Modern UI**: Built with Next.js and React for a responsive user experience
-- **Secure Key Management**: Proper handling of keypairs with secure storage options
-- **Solana Token Program 2022**: Support for the latest token standard with advanced features
-- **Transaction Preparation**: Formats transactions for signing by external wallets
+The script has two modes of operation:
+
+1. **Private Key Mode (Recommended)**: If you provide a valid `WALLET_SECRET_KEY` in the .env file, the script will:
+   - Load your wallet from the private key
+   - Use it as the payer and authority for the token
+   - Sign the transaction automatically
+   - Allow you to broadcast the transaction directly
+
+2. **Crossmint API Mode**: If no valid private key is provided, the script will:
+   - Create a new Crossmint wallet
+   - Use it as the payer and authority
+   - Generate a transaction that needs to be signed via the Crossmint API
+
+## Next Steps After Running the Script
+
+After running the script, the next steps depend on which mode you used:
+
+### If using your own wallet:
+
+1. Send the signed transaction to the Solana network using the Solana CLI or web3.js
+2. Check the token on Solana Explorer at the provided link
+
+### If using Crossmint:
+
+1. Send the transaction to Crossmint API for signing:
+   ```
+   POST https://staging.crossmint.com/api/2022-06-09/wallets/:wallet_id/transactions
+   ```
+   
+2. Approve the transaction:
+   ```
+   POST https://staging.crossmint.com/api/2022-06-09/wallets/:wallet_id/transactions/:transaction_id/approve
+   ```
 
 ## Technical Details
 
 The project uses:
-- Next.js 15.2.2
-- Solana Web3.js and SPL Token libraries
 - TypeScript for type safety
-- Tailwind CSS for styling
-
-## Security Considerations
-
-- Keep your wallet private keys secure
-- The application never exposes private keys in the browser
-- Consider using hardware wallets for additional security when managing high-value tokens
+- Solana Web3.js and SPL Token libraries for blockchain interactions
+- bs58 for decoding private keys
+- Crossmint API for wallet creation (optional)
+- dotenv for environment variable management
 
 ## License
 
-[MIT](LICENSE)
-
-## Contributions
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Private
