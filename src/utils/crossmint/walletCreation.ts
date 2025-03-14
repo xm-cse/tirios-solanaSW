@@ -4,10 +4,10 @@ import bs58 from 'bs58';
 // Crossmint API configuration
 const CROSSMINT_API_KEY = process.env.CROSSMINT_API_KEY || "YOUR_API_KEY";
 const WALLET_TYPE = "solana-smart-wallet"; // For Solana-based wallets
-export const signer=loadWalletFromEnv();
+export const walletSigner=loadWalletFromEnv();
 export const ADMIN_SIGNER = {
     type: "solana-keypair",
-    address: signer.publicKey.toString(),
+    address: walletSigner.publicKey.toString(),
 };
 
 // Interface representing the Crossmint wallet response

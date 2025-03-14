@@ -1,4 +1,5 @@
-import { Connection, PublicKey, Keypair, Transaction, SystemProgram } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction, SystemProgram, 
+  TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import {
     createInitializeMintInstruction,
     createAssociatedTokenAccountInstruction,
@@ -18,55 +19,111 @@ export const connection = new Connection(SOLANA_NETWORK, 'confirmed');
 // Load wallet from environment variables
 
 // Mint pubkey for the token - using the original address
-export const mintKeypair = new PublicKey('5BUhqfUT3JcL2iZ5PSMA3E1EDU6uxmgYAAumQkmRX91z');
+export const mintWallet = Keypair.generate();
 
+/**
+ * Sends a transaction to Crossmint API for signing
+ * @param walletAddress The address of the Crossmint wallet
+ * @param serializedTransaction The base58 encoded transaction
+ * @returns The response from the Crossmint API
+ */
+export async function sendTransactionToCrossmint(walletAddress: string, serializedTransaction: string): Promise<any> {
+    const CROSSMINT_API_KEY = process.env.CROSSMINT_API_KEY;
+    if (!CROSSMINT_API_KEY) {
+        throw new Error('CROSSMINT_API_KEY not set in environment variables');
+    }
 
-export async function createTokenWith2022Program(): Promise<string> {
+    try {
+        console.log(`Sending transaction to Crossmint for wallet: ${walletAddress}`);
+        const response = await fetch(`https://staging.crossmint.com/api/2022-06-09/wallets/${walletAddress}/transactions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': CROSSMINT_API_KEY
+            },
+            body: JSON.stringify({
+                params: {
+                    transaction: serializedTransaction
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to send transaction to Crossmint: ${response.statusText}. Details: ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Transaction sent to Crossmint successfully');
+        return data;
+    } catch (error) {
+        console.error('Error sending transaction to Crossmint:', error);
+        throw error;
+    }
+}
+
+export async function createTokenWith2022Program(): Promise<{transaction: string, walletAddress: string}> {
     try {
         console.log('Creating token using Solana Token Program 2022');
 
-        const crossMintPayer = new PublicKey((await createCrossmintWallet()).address);
-        console.log(crossMintPayer.toString());
+        // Create a Crossmint wallet
+        const crossmintWalletResponse = await createCrossmintWallet();
+        const smartWallet = new PublicKey(crossmintWalletResponse.address);
+        
+        console.log('Using Crossmint wallet:', smartWallet.toString());
+        
         // Get the minimum lamports for rent exemption
         const lamports = await getMinimumBalanceForRentExemptMint(connection);
         
         // Get latest blockhash
         const { blockhash } = await connection.getLatestBlockhash();
         
-        const transaction = new Transaction().add(
-            // Create account instruction
-            SystemProgram.createAccount({
-                fromPubkey: crossMintPayer,
-                newAccountPubkey: mintKeypair,
-                space: MINT_SIZE,
-                lamports,
-                programId: TOKEN_2022_PROGRAM_ID,
-            }),
-            // Init mint instruction
-            createInitializeMintInstruction(
-                mintKeypair,
-                9,
-                crossMintPayer,  // Using payer as mint authority
-                crossMintPayer,  // Using payer as freeze authority
-                TOKEN_2022_PROGRAM_ID
-            )
+        // Create instructions
+        const createAccountInstruction = SystemProgram.createAccount({
+            fromPubkey: smartWallet,
+            newAccountPubkey: mintWallet.publicKey,
+            space: MINT_SIZE,
+            lamports,
+            programId: TOKEN_2022_PROGRAM_ID,
+        });
+        
+        const initMintInstruction = createInitializeMintInstruction(
+            mintWallet.publicKey,
+            9,
+            smartWallet,  // Using payer as mint authority
+            smartWallet,  // Using payer as freeze authority
+            TOKEN_2022_PROGRAM_ID
         );
-
-        // Set recent blockhash and fee payer
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = crossMintPayer;
-
+        
+        // Use TransactionMessage and VersionedTransaction as shown in the example
+        const message = new TransactionMessage({
+            instructions: [
+                createAccountInstruction,
+                initMintInstruction
+            ],
+            recentBlockhash: blockhash,
+            payerKey: smartWallet,
+        }).compileToV0Message();
+        
+        // Create a VersionedTransaction
+        const transaction = new VersionedTransaction(message);
+        
+        // Sign the transaction with the mint keypair
+        transaction.sign([mintWallet]);
+        
         // Serialize the transaction
-        const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
-        const base58Transaction = bs58.encode(serializedTransaction);
+        const serializedTransaction = bs58.encode(transaction.serialize());
 
         console.log('\nPartially Signed Transaction (Base58):');
-        console.log(base58Transaction);
+        console.log(serializedTransaction);
         console.log('\nKey Information:');
-        console.log('Payer/Authority Address:', crossMintPayer.toString());
-        console.log('Mint Address:', mintKeypair.toString());
+        console.log('Payer/Authority Address:', smartWallet.toString());
+        console.log('Mint Address:', mintWallet.publicKey.toString());
 
-        return base58Transaction;
+        return {
+            transaction: serializedTransaction,
+            walletAddress: smartWallet.toString()
+        };
     } catch (error) {
         console.error('Error:', error);
         throw error;
