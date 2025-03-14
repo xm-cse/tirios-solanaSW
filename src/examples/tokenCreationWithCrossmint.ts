@@ -37,7 +37,7 @@ async function approveTransaction(transactionId: string, walletAddress: string, 
         console.log("Generated signature:", signature);
         
         // Send approval to Crossmint
-        const response = await fetch(`https://staging.crossmint.com/api/2022-06-09/wallets/${walletAddress}/transactions/${transactionId}/approve`, {
+        const response = await fetch(`https://staging.crossmint.com/api/2022-06-09/wallets/${walletAddress}/transactions/${transactionId}/approvals`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -95,13 +95,14 @@ async function main() {
             crossmintResponse.approvals.pending.length > 0) {
             
             console.log('\n\x1b[32m%s\x1b[0m', 'Step 4: Approving transaction...');
-            const pendingApproval = crossmintResponse.approvals.pending[0];
+            const pendingApproval = crossmintResponse.approvals.pending;
+            console.log('Pending Approval:', pendingApproval);
             const approvalResponse = await approveTransaction(
                 crossmintResponse.id, 
-                walletAddress, 
-                pendingApproval.message
+               walletAddress, 
+             pendingApproval.message
             );
-            console.log('\nApproval Response:', JSON.stringify(approvalResponse, null, 2));
+           // console.log('\nApproval Response:', JSON.stringify(approvalResponse, null, 2));
             
             console.log('\n\x1b[36m%s\x1b[0m', '=== Transaction Successfully Approved ===');
             console.log('The token has been created on the Solana blockchain!');

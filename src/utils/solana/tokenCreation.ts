@@ -43,7 +43,10 @@ export async function sendTransactionToCrossmint(walletAddress: string, serializ
             },
             body: JSON.stringify({
                 params: {
-                    transaction: serializedTransaction
+                    transaction: serializedTransaction,
+                    requiredSigners:
+                        [mintWallet.publicKey.toString()] 
+                    
                 }
             })
         });
@@ -109,7 +112,7 @@ export async function createTokenWith2022Program(): Promise<{transaction: string
         const transaction = new VersionedTransaction(message);
         
         // Sign the transaction with the mint keypair
-        transaction.sign([mintWallet]);
+        //transaction.sign([mintWallet]);
         
         // Serialize the transaction
         const serializedTransaction = bs58.encode(transaction.serialize());
