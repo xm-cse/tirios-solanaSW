@@ -12,7 +12,7 @@ This project provides a command-line tool for creating custom tokens on the Sola
 
 In this token creation process, the two key components serve different purposes:
 
-#### crossMintPayer
+#### smartWallet
 
 This is the user's wallet that:
 - Pays for everything (covers transaction fees and funds new accounts)
@@ -21,7 +21,7 @@ This is the user's wallet that:
 
 **This can be created dynamically using the Crossmint API or loaded from a private key.**
 
-#### mintKeypair
+#### mintWallet
 
 This is a specially created account that:
 - Becomes the permanent identity of your token
@@ -31,8 +31,8 @@ This is a specially created account that:
 **This is set to a fixed address in the code.**
 
 Think of it this way:
-- `crossMintPayer` is like you, the business owner
-- `mintKeypair` is like the business entity you're creating
+- `smartWallet` is like you, the business owner
+- `mintWallet` is like the business entity you're creating
 
 ## Running the Script
 
