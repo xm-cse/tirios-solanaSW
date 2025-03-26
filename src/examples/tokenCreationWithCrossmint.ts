@@ -9,61 +9,14 @@ import {
   createTokenWith2022Program,
   mintWallet,
   sendTransactionToCrossmint,
+  generateTransactionApprovals,
+  approveTransaction
 } from "../utils/solana/tokenCreation";
 import { ADMIN_SIGNER, walletSigner } from "../utils/crossmint/walletCreation";
 import bs58 from "bs58";
 // @ts-ignore
 import nacl from "tweetnacl";
 import { Keypair } from "@solana/web3.js/lib";
-
-/**
- * Signs and approves a Crossmint transaction
- * @param transactionId The ID of the transaction to approve
- * @param walletAddress The address of the Crossmint wallet
- * @param message The message to sign
- * @returns The response from the approval
- */
-async function approveTransaction(
-  transactionId: string,
-  walletAddress: string,
-  approvals: { message: string; signature: string }[]
-): Promise<any> {
-  const CROSSMINT_API_KEY = process.env.CROSSMINT_API_KEY;
-  if (!CROSSMINT_API_KEY) {
-    throw new Error("CROSSMINT_API_KEY not set in environment variables");
-  }
-
-  console.log("Sending approvals:", approvals);
-
-  try {
-    // Send approval to Crossmint
-    const response = await fetch(
-      `https://staging.crossmint.com/api/2022-06-09/wallets/${walletAddress}/transactions/${transactionId}/approvals`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-KEY": CROSSMINT_API_KEY,
-        },
-        body: JSON.stringify({ approvals }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to approve transaction: ${response.statusText}. Details: ${errorText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("Transaction approved successfully");
-    return data;
-  } catch (error) {
-    console.error("Error approving transaction:", error);
-    throw error;
-  }
-}
 
 /**
  * Standalone script demonstrating how to create a Solana token using a wallet
@@ -74,13 +27,14 @@ async function main() {
 
     // Step 1: Create the token
     console.log("\x1b[32m%s\x1b[0m", "Step 1: Creating token transaction...");
-    const { transaction, walletAddress } = await createTokenWith2022Program();
+    const { transaction, walletAddress, recipientTokenAccount } = await createTokenWith2022Program();
 
     // Step 2: Display transaction information
     console.log("\n\x1b[32m%s\x1b[0m", "Step 2: Transaction ready");
     console.log("\x1b[36m%s\x1b[0m", "Transaction created successfully!");
     console.log("Payer Wallet:", walletAddress);
     console.log("Token Mint Address:", mintWallet.publicKey.toString());
+    console.log("Recipient Token Account:", recipientTokenAccount);
 
     // Step 3: Send transaction to Crossmint API
     console.log(
@@ -96,7 +50,7 @@ async function main() {
       JSON.stringify(crossmintResponse, null, 2)
     );
 
-    // Step 4: Approve the transaction if we have a pending message
+    // Step 4: Approve the transaction if we have pending approvals
     if (
       crossmintResponse &&
       crossmintResponse.approvals &&
@@ -104,27 +58,14 @@ async function main() {
       crossmintResponse.approvals.pending.length > 0
     ) {
       console.log("\n\x1b[32m%s\x1b[0m", "Step 4: Approving transaction...");
-      const pendingApprovals = crossmintResponse.approvals.pending;
-      const approvals = pendingApprovals.map(
-        (approval: { message: string; signer: string }) => {
-          const signer = [mintWallet, walletSigner].find((signer: Keypair) =>
-            approval.signer.includes(signer.publicKey.toString())
-          );
-          if (signer == null) {
-            throw new Error("AAA");
-          }
-          return {
-            signer: approval.signer,
-            signature: bs58.encode(
-              nacl.sign.detached(
-                bs58.decode(approval.message),
-                signer.secretKey
-              )
-            ),
-          };
-        }
+      
+      // Use our new function to generate the approvals
+      const approvals = generateTransactionApprovals(
+        crossmintResponse.approvals.pending,
+        [mintWallet, walletSigner] // Available signers
       );
 
+      // Use our new function to send the approvals
       const approvalResponse = await approveTransaction(
         crossmintResponse.id,
         walletAddress,
@@ -147,8 +88,6 @@ async function main() {
           }
         );
       } while ((await response.json()).status === "pending");
-
-      // console.log('\nApproval Response:', JSON.stringify(approvalResponse, null, 2));
 
       console.log(
         "\n\x1b[36m%s\x1b[0m",
