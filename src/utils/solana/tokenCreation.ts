@@ -200,11 +200,21 @@ export async function createTokenWith2022Program(): Promise<{
             TOKEN_2022_PROGRAM_ID
         );
         
+        // Create instruction to initialize the recipient's token account
+        const createTokenAccountInstruction = createAssociatedTokenAccountInstruction(
+            smartWallet,  // payer
+            recipientTokenAccount, // ata
+            recipientAddress, // owner
+            mintWallet.publicKey, // mint
+            TOKEN_2022_PROGRAM_ID // program ID
+        );
+        
         // Use TransactionMessage and VersionedTransaction as shown in the example
         const message = new TransactionMessage({
             instructions: [
                 createAccountInstruction,
-                initMintInstruction
+                initMintInstruction,
+                createTokenAccountInstruction // Added instruction to create token account
             ],
             recentBlockhash: blockhash,
             payerKey: smartWallet,
