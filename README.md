@@ -34,6 +34,24 @@ Think of it this way:
 - `smartWallet` is like you, the business owner
 - `mintWallet` is like the business entity you're creating
 
+### Token Accounts
+
+In Solana, owners don't hold tokens directly in their wallet addresses. Instead, each wallet needs a separate token account for each type of token:
+
+#### recipientTokenAccount
+
+- A specialized account that can hold a specific token type (determined by the mint)
+- Associated with a specific owner (wallet address)
+- Created using the `getAssociatedTokenAddress` function
+- Derived deterministically from the owner's address and the mint address
+- The address where tokens are actually sent when "sending to a recipient"
+
+Each recipient wallet needs its own token account for each type of token they want to hold. The script automatically:
+1. Calculates the appropriate token account address for the recipient
+2. Returns this address so tokens can be minted to it later
+
+**Note:** Some recipient addresses may be Program Derived Addresses (PDAs) rather than standard ed25519 keypairs. The script handles this with the `allowOwnerOffCurve` flag to ensure token accounts can be created for these special types of addresses.
+
 ## Running the Script
 
 ### Prerequisites
